@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGNA · Weihnachtsmarkt Bellevue · Security Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0b10;--bg2:#10121a;--bg3:#181b26;--bg4:#1f2330;
+  --border:#ffffff0e;--border2:#ffffff16;
+  --text:#e8eaed;--text2:#8b9099;--text3:#4e545e;
+  --stzh:#0F05A0;--stzh-dim:#07037a;--stzh-bg:#0F05A018;
+  --stzh-mid:#2918c4;
+  --amber:#d97706;--red:#dc2626;--yellow:#FCD34D;
+  --font:'SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'SF Mono','Fira Code',monospace;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;font-size:13px;overflow:hidden}
+.shell{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:196px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-img{height:20px;width:auto;opacity:.9}
+.logo-meta{display:flex;flex-direction:column;gap:1px}
+.logo-name{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.03em}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.nav{padding:10px 8px;flex:1}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;margin-bottom:2px;transition:background .12s,color .12s;user-select:none}
+.nav-item svg{width:14px;height:14px;flex-shrink:0}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--stzh-bg);color:#6b8fff;border:0.5px solid #2918c433}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center}
+.sidebar-footer{padding:12px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);line-height:1.5}
+
+/* ── TOPBAR ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.topbar{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:14px;flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:600}
+.topbar-spacer{flex:1}
+.clock{font-family:var(--mono);font-size:12px;background:var(--bg3);padding:3px 9px;border-radius:6px;border:0.5px solid var(--border2)}
+.operator-chip{display:flex;align-items:center;gap:7px;background:var(--bg3);padding:4px 10px;border-radius:6px;border:0.5px solid var(--border2)}
+.op-avatar{width:20px;height:20px;border-radius:50%;background:var(--stzh-dim);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff}
+.op-name{font-size:11px;color:var(--text2)}
+.topbar-meta{font-size:11px;color:var(--text3)}
+
+/* ── SCREEN SWITCHING ── */
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+.content{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+
+/* ── ALERT TRAY ── */
+.alert-tray{background:var(--bg2);border:0.5px solid #dc262630;border-radius:var(--radius-lg);overflow:hidden;position:relative;flex-shrink:0}
+.alert-tray-scan{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#dc262680,transparent);animation:scan 3s linear infinite}
+@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(80px)}}
+.alert-header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid #dc262620}
+.alert-pulse{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 #dc262680;animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 #dc262680}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.alert-title{font-size:12px;font-weight:600;color:var(--red)}
+.alert-count{font-size:11px;color:var(--text3);margin-left:auto}
+.alert-items{display:flex;flex-direction:column}
+.alert-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .12s}
+.alert-item:last-child{border-bottom:none}
+.alert-item:hover{background:var(--bg3)}
+.alert-loc{font-size:12px;font-weight:600;color:var(--text);flex:0 0 auto}
+.alert-desc{font-size:11px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert-time{font-family:var(--mono);font-size:11px;color:var(--text3);flex:0 0 auto}
+.alert-action{font-size:11px;font-weight:600;color:#6b8fff;background:var(--stzh-bg);border:0.5px solid #2918c433;border-radius:5px;padding:3px 10px;cursor:pointer;font-family:var(--font);white-space:nowrap}
+
+/* ── TIER BADGES ── */
+.tier-badge{font-size:9px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:5px;display:inline-block;white-space:nowrap;flex-shrink:0}
+.t3{background:#dc262620;color:var(--red);border:0.5px solid #dc262650}
+.t2{background:#d9770620;color:var(--amber);border:0.5px solid #d9770650}
+.t1{background:#0F05A018;color:#6b8fff;border:0.5px solid #2918c433}
+.tub{background:#FCD34D18;color:var(--yellow);border:0.5px solid #FCD34D44}
+
+/* ── STAT CARDS ── */
+.stat-row{display:flex;gap:10px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:100px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:12px 14px}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stat-value{font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.stat-delta{font-size:10px;margin-top:4px}
+.delta-up{color:#22c55e}
+.delta-neutral{color:var(--text3)}
+
+/* ── CONTENT ROW ── */
+.content-row{display:flex;gap:0;flex:1;overflow:hidden}
+.content-row > .content{flex:1}
+
+/* ── DETAIL PANEL ── */
+.detail-panel{width:0;background:var(--bg2);border-left:0px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1),border-left-width .22s}
+.detail-panel.open{width:300px;border-left-width:1px}
+.detail-header{padding:13px 15px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.detail-title{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-close{width:24px;height:24px;border-radius:5px;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;font-family:var(--font)}
+.detail-body{padding:14px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.detail-section{display:flex;flex-direction:column;gap:4px}
+.detail-section-label{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.detail-value{font-size:12px;color:var(--text)}
+.detail-value-sub{font-size:10px;color:var(--text3)}
+.detail-divider{height:0.5px;background:var(--border2);margin:2px 0}
+.detail-inds{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.detail-ind{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
+.detail-ind-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.desc-box{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--text2);line-height:1.6;font-style:italic}
+.phone-val{font-size:12px;color:var(--text);font-family:var(--mono)}
+.officer-note{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:8px 10px;font-size:11px;color:var(--text2);font-family:var(--font);resize:none;min-height:80px;line-height:1.5;outline:none}
+.officer-note:focus{border-color:#2918c455}
+.action-row{display:flex;gap:6px;margin-top:4px}
+.action-btn{flex:1;padding:7px;border-radius:var(--radius);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);border:0.5px solid;text-align:center}
+.action-resolve{background:#22c55e18;color:#22c55e;border-color:#22c55e44}
+.action-escalate{background:#dc262618;color:var(--red);border-color:#dc262644}
+.forwarded-label{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── MAP SCREEN ── */
+.map-shell{display:flex;flex:1;overflow:hidden;position:relative}
+.filter-bar{padding:9px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0;background:var(--bg2)}
+.filter-label{font-size:10px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-right:1px}
+.chip{font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .12s;user-select:none}
+.chip.active{background:var(--stzh-bg);border-color:#2918c455;color:#6b8fff}
+.chip.am-active{background:#d9770618;border-color:#d9770644;color:var(--amber)}
+.filter-sep{width:1px;height:18px;background:var(--border2);margin:0 2px;flex-shrink:0}
+.map-wrap{flex:1;overflow:hidden;cursor:grab;position:relative;background:#07090d}
+.map-wrap.dragging{cursor:grabbing}
+.map-inner{position:absolute;transform-origin:0 0;will-change:transform}
+.zoom-controls{position:absolute;bottom:16px;left:16px;display:flex;flex-direction:column;gap:4px;z-index:10}
+.zbtn{width:32px;height:32px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;user-select:none;font-family:var(--font)}
+.zbtn:hover{color:var(--text);background:var(--bg3)}
+.legend{position:absolute;bottom:16px;right:16px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:10px 14px;display:flex;flex-direction:column;gap:5px;z-index:10}
+.leg-row{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text2)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ── LOG SCREEN ── */
+.log-table-wrap{flex:1;overflow-y:auto}
+.log-table{width:100%;border-collapse:collapse}
+.log-table th{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-bottom:0.5px solid var(--border2);text-align:left;position:sticky;top:0;background:var(--bg2)}
+.log-table td{padding:9px 14px;border-bottom:0.5px solid var(--border);font-size:12px;vertical-align:middle}
+.log-table tr:hover td{background:var(--bg3);cursor:pointer}
+.log-loc{font-weight:500;color:var(--text)}
+.log-loc-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.log-time{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.ind-tag{display:inline-block;font-size:9px;background:var(--bg3);border:0.5px solid var(--border2);border-radius:4px;padding:2px 6px;margin:1px 2px 1px 0;color:var(--text3)}
+
+/* ── ANALYTICS SCREEN ── */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;flex:1;overflow-y:auto}
+.chart-card{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;gap:10px}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.chart-sub{font-size:10px;color:var(--text3)}
+.bar-chart{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px}
+.bar-label{font-size:10px;color:var(--text2);width:110px;flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.bar-val{font-size:10px;color:var(--text3);width:24px;text-align:right;flex-shrink:0}
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.donut-leg-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2)}
+.donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.time-bars{display:flex;align-items:flex-end;gap:3px;height:60px}
+.time-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.time-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;background:var(--stzh-mid);opacity:.7}
+.time-bar.peak{opacity:1;background:#3b4fff}
+.time-bar-label{font-size:8px;color:var(--text3)}
+.data-note{font-size:10px;color:var(--text3);line-height:1.5;background:var(--bg3);border-radius:var(--radius);padding:8px 10px;border:0.5px solid var(--border)}
+
+/* ── NODES SCREEN ── */
+.nodes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;padding:18px;flex:1;overflow-y:auto;align-content:start}
+.node-card{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.node-id{font-family:var(--mono);font-size:9px;color:var(--stzh-mid);font-weight:700}
+.node-name{font-size:11px;font-weight:500;color:var(--text);line-height:1.3}
+.node-zone{font-size:9px;color:var(--text3)}
+.node-status{display:flex;align-items:center;gap:5px;margin-top:3px}
+.node-dot{width:6px;height:6px;border-radius:50%}
+.node-dot.ok{background:#22c55e}
+.node-dot.idle{background:var(--text3)}
+.node-status-label{font-size:9px;color:var(--text3)}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <img class="logo-img" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI1LjQuMSwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkViZW5lXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHdpZHRoPSIyNTBweCIgaGVpZ2h0PSI1OS40cHgiIHZpZXdCb3g9IjAgMCAyNTAgNTkuNCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjUwIDU5LjQ7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPG1ldGFkYXRhPjw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+Cjx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDAyIDc5LjE2NDQ4OCwgMjAyMC8wNy8xMC0yMjowNjo1MyAgICAgICAgIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIgogICAgICAgICAgICB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iCiAgICAgICAgICAgIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIKICAgICAgICAgICAgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iCiAgICAgICAgICAgIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiPgogICAgICAgICA8cGhvdG9zaG9wOkhlYWRsaW5lPkxvZ28gU3RhZHQgWsO8cmljaDwvcGhvdG9zaG9wOkhlYWRsaW5lPgogICAgICAgICA8cGhvdG9zaG9wOkNhcHRpb25Xcml0ZXI+U3RhZHQgWsO8cmljaDwvcGhvdG9zaG9wOkNhcHRpb25Xcml0ZXI+CiAgICAgICAgIDxwaG90b3Nob3A6RGF0ZUNyZWF0ZWQ+MjAyMC0xMi0wMVQwMDowMFo8L3Bob3Rvc2hvcDpEYXRlQ3JlYXRlZD4KICAgICAgICAgPGRjOmNyZWF0b3I+CiAgICAgICAgICAgIDxyZGY6U2VxPgogICAgICAgICAgICAgICA8cmRmOmxpPlN0YWR0IFrDvHJpY2g8L3JkZjpsaT4KICAgICAgICAgICAgPC9yZGY6U2VxPgogICAgICAgICA8L2RjOmNyZWF0b3I+CiAgICAgICAgIDx4bXA6TWV0YWRhdGFEYXRlPjIwMjEtMTAtMTNUMTU6NTg6NDIrMDI6MDA8L3htcDpNZXRhZGF0YURhdGU+CiAgICAgICAgIDx4bXBNTTpJbnN0YW5jZUlEPnhtcC5paWQ6MDY3MDdkZGQtYzRiOS00YTA4LTk0NzYtMmFiYzY1YzM3MzUxPC94bXBNTTpJbnN0YW5jZUlEPgogICAgICAgICA8eG1wTU06RG9jdW1lbnRJRD54bXAuZGlkOjA2NzA3ZGRkLWM0YjktNGEwOC05NDc2LTJhYmM2NWMzNzM1MTwveG1wTU06RG9jdW1lbnRJRD4KICAgICAgICAgPHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD54bXAuZGlkOjA2NzA3ZGRkLWM0YjktNGEwOC05NDc2LTJhYmM2NWMzNzM1MTwveG1wTU06T3JpZ2luYWxEb2N1bWVudElEPgogICAgICAgICA8eG1wTU06SGlzdG9yeT4KICAgICAgICAgICAgPHJkZjpTZXE+CiAgICAgICAgICAgICAgIDxyZGY6bGk+CiAgICAgICAgICAgICAgICAgIDxyZGY6RGVzY3JpcHRpb24+CiAgICAgICAgICAgICAgICAgICAgIDxzdEV2dDphY3Rpb24+c2F2ZWQ8L3N0RXZ0OmFjdGlvbj4KICAgICAgICAgICAgICAgICAgICAgPHN0RXZ0Omluc3RhbmNlSUQ+eG1wLmlpZDowNjcwN2RkZC1jNGI5LTRhMDgtOTQ3Ni0yYWJjNjVjMzczNTE8L3N0RXZ0Omluc3RhbmNlSUQ+CiAgICAgICAgICAgICAgICAgICAgIDxzdEV2dDp3aGVuPjIwMjEtMTAtMTNUMTU6NTg6NDIrMDI6MDA8L3N0RXZ0OndoZW4+CiAgICAgICAgICAgICAgICAgICAgIDxzdEV2dDpzb2Z0d2FyZUFnZW50PkFkb2JlIEJyaWRnZSAyMDIxIChNYWNpbnRvc2gpPC9zdEV2dDpzb2Z0d2FyZUFnZW50PgogICAgICAgICAgICAgICAgICAgICA8c3RFdnQ6Y2hhbmdlZD4vbWV0YWRhdGE8L3N0RXZ0OmNoYW5nZWQ+CiAgICAgICAgICAgICAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICAgICAgICAgICAgICA8L3JkZjpsaT4KICAgICAgICAgICAgPC9yZGY6U2VxPgogICAgICAgICA8L3htcE1NOkhpc3Rvcnk+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9InciPz48L21ldGFkYXRhPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8ZyBpZD0iQmlsZG1hcmtlIj4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik04MywzOWMtMC4zLDAtMC42LDAuMS0wLjksMC4yYy0wLjQtMS40LTAuOC0yLjgtMS4xLTQuMmwxLjYtMi4yYzAuMi0wLjMsMi45LTMuNywyLjktNi45YzAtNC43LTQtNC44LTQuNC00LjgKCQljLTEsMC0yLjUsMC40LTMuNCwxLjZjLTAuOSwxLjEtMS4xLDIuNi0wLjcsNC40YzAuMSwwLjMsMSwzLjksMiw3LjVsLTEuNiwyLjFsLTMuNS0xMy40bDgtNS45bDAsMGMyLjItMS43LDMuNS00LjQsMy41LTcuMgoJCWMwLTQuMy0zLTgtNy4xLTguOVYwLjRMNzYuNywwdjFsLTQuNi0wLjNoLTEuNXYzLjdoMS41YzAuNCwwLDAuOCwwLjQsMC44LDAuOFM3Mi41LDYsNzIuMSw2bC01LTAuNWwwLjQsMS42TDcyLDcuNWwwLDBoMC4xCgkJYzEuMywwLDIuMy0xLDIuMy0yLjNzLTEtMi4zLTIuMy0yLjNWMi4zbDQuNSwwLjN2NC4zYzAsMC41LTAuMiwwLjktMC41LDEuMnMtMC44LDAuNS0xLjMsMC40bC01LjEtMC4zbDAuNCwxLjVsMCwwCgkJYy0xLjQsMC45LTIuNiwyLjEtMy41LDMuNGwtMi00LjNDNjQuOSw4LjMsNjUsNy43LDY1LDcuMmMwLTItMS42LTMuNi0zLjYtMy42Yy0xLjMsMC0yLjQsMC42LTMsMS42TDU4LjgsMUgyNi43TDI3LDUuMwoJCWMtMC42LTEtMS44LTEuNi0zLTEuNmMtMiwwLTMuNiwxLjYtMy42LDMuNmMwLDAuNiwwLjEsMS4xLDAuNCwxLjZsLTIsNC4zYy0wLjktMS40LTIuMS0yLjUtMy41LTMuNGwwLDBsMC40LTEuNWwtNS4xLDAuMwoJCWMtMC41LDAtMC45LTAuMS0xLjMtMC40QzksNy43LDguOSw3LjMsOC45LDYuOFYyLjVsNC41LTAuM3YwLjZjLTEuMywwLTIuMywxLjEtMi4zLDIuM2MwLDEuMywxLDIuMywyLjMsMi4zaDAuMUwxOCw3LjFsMC40LTEuNgoJCWwtNSwwLjVjLTAuNCwwLTAuOC0wLjQtMC44LTAuOHMwLjQtMC44LDAuOC0wLjhoMS41VjAuOGgtMS41TDguOSwxVjBMNy4zLDAuNHYwLjhjLTQuMiwwLjktNy4xLDQuNi03LjEsOC45YzAsMi44LDEuMyw1LjUsMy41LDcuMgoJCWw4LDUuOUw4LjIsMzYuN2wtMS42LTIuMWMxLTMuNSwxLjktNy4xLDItNy41YzAuNC0xLjgsMC4yLTMuMy0wLjctNC40Yy0wLjktMS4yLTIuNC0xLjYtMy40LTEuNkM0LDIxLjEsMCwyMS4zLDAsMjYKCQljMCwzLjEsMi43LDYuNSwyLjksNi45TDQuNSwzNWMtMC40LDEuNC0wLjgsMi44LTEuMSw0LjJDMy4yLDM5LjEsMi45LDM5LDIuNiwzOWMtMS4yLDAtMi4yLDEtMi4yLDIuMnMxLDIuMiwyLjIsMi4yCgkJYzEsMCwxLjktMC43LDIuMS0xLjZsMCwwQzQuOCw0MS4zLDUuNCwzOS4zLDYsMzdsMS42LDIuMUwzLjQsNTQuOWwwLDBjLTAuMSwwLjMtMC4xLDAuNS0wLjEsMC44YzAsMiwxLjYsMy42LDMuNiwzLjYKCQlzMy42LTEuNiwzLjYtMy42YzAtMC45LTAuMy0xLjctMC45LTIuNGwzLjctNmw3LjQsMTAuNGMwLjcsMSwxLjgsMS41LDMsMS41YzIsMCwzLjYtMS42LDMuNi0zLjZTMjUuNyw1MiwyMy43LDUyCgkJYy0wLjEsMC0wLjEsMC0wLjIsMGwtNS0xNC4yYy0wLjUtMS4zLTEuNi0yLjItMy0yLjRjLTAuMiwwLTAuNCwwLTAuNiwwbDMuNC03LjRsNC41LDMuM2MwLjYsMC41LDEuNCwwLjgsMi4yLDAuOAoJCWMwLjIsMCwwLjQsMCwwLjctMC4xTDI3LDQ1LjFjMC40LDMuNiwyLjMsNy4xLDUuMyw5LjhjMy4xLDIuOCw2LjgsNC4zLDEwLjYsNC4zbDAsMGMzLjgsMCw3LjYtMS41LDEwLjYtNC4zYzMtMi43LDQuOS02LjMsNS4zLTkuOAoJCWwxLjItMTNjMC4yLDAsMC40LDAuMSwwLjcsMC4xYzAuOCwwLDEuNi0wLjMsMi4yLTAuOGw0LjUtMy4zbDMuNCw3LjRjLTAuMiwwLTAuNCwwLTAuNiwwYy0xLjQsMC4yLTIuNSwxLjEtMywyLjRsLTUsMTQuMgoJCWMtMC4xLDAtMC4xLDAtMC4yLDBjLTIsMC0zLjYsMS42LTMuNiwzLjZzMS42LDMuNiwzLjYsMy42YzEuMiwwLDIuMy0wLjYsMy0xLjVsNy40LTEwLjRsMy43LDZDNzUuMyw1NCw3NSw1NC44LDc1LDU1LjcKCQljMCwyLDEuNiwzLjYsMy42LDMuNnMzLjYtMS42LDMuNi0zLjZjMC0wLjMsMC0wLjUtMC4xLTAuOEw3OCwzOS4xbDEuNi0yLjFjMC42LDIuMywxLjIsNC4zLDEuMyw0LjhsMCwwYzAuMiwwLjksMS4xLDEuNiwyLjEsMS42CgkJYzEuMiwwLDIuMi0xLDIuMi0yLjJTODQuMiwzOSw4MywzOXogTTUuMiwzMi43bC0wLjctMWwwLDBDMy44LDMwLjgsMiwyOC4xLDIsMjZjMC0yLjYsMS44LTIuOSwyLjUtMi45YzAuNiwwLDEuNCwwLjIsMiwwLjkKCQljMC41LDAuNiwwLjYsMS42LDAuNCwyLjhDNi43LDI3LDYsMjkuNSw1LjIsMzIuN3ogTTYxLjYsNS41YzEsMCwxLjcsMC44LDEuNywxLjdjMCwwLjQtMC4xLDAuNy0wLjMsMWwtMC4zLDAuNGwzLjEsNi41CgkJYy0wLjQsMS4xLTAuNywyLjItMC43LDMuNGwtNS0xMC44QzYwLDcuNSw2MCw3LjMsNjAsNy4xQzU5LjgsNi4zLDYwLjYsNS41LDYxLjYsNS41eiBNNTAuOSwxMC4zaC00LjRWOC4ySDUxTDUwLjksMTAuM3ogTTQ1LDEwLjMKCQloLTQuNFY4LjJINDVWMTAuM3ogTTM5LjEsMTAuM2gtNC40bC0wLjEtMi4xSDM5TDM5LjEsMTAuM3ogTTMzLjEsMTAuM0gyOWwtMC4yLTIuMWg0LjNWMTAuM3ogTTU2LjUsMTEuOWwtMC4yLDIuNWgtMjdsLTAuMi0yLjUKCQlINTYuNXogTTU2LjYsMTAuM2gtNC4ybDAuMS0yLjFoNC4zTDU2LjYsMTAuM3ogTTU0LjIsMi42bC0wLjEsMi43aDEuNWwwLjEtMi43aDEuNWwtMC4zLDQuMWgtNC40bDAuMS00LjEKCQlDNTIuNywyLjYsNTQuMiwyLjYsNTQuMiwyLjZ6IE00OC4xLDIuNkw0OCw1LjNoMS41bDAuMS0yLjdoMS41TDUxLDYuN2gtNC41bDAuMS00LjFINDguMXogTTQyLDIuNnYyLjdoMS41VjIuNkg0NXY0LjFoLTQuNQoJCWwtMC4xLTQuMUM0MC41LDIuNiw0MiwyLjYsNDIsMi42eiBNMzUuOSwyLjZMMzYsNS4zaDEuNWwtMC4xLTIuN0gzOXY0LjFoLTQuNWwtMC4xLTQuMUgzNS45eiBNMjkuOCwyLjZMMzAsNS4zaDEuNWwtMC4xLTIuN2gxLjUKCQlMMzMsNi43aC00LjRsLTAuMy00LjFDMjguMywyLjYsMjkuOCwyLjYsMjkuOCwyLjZ6IE0yNy4zLDguN2wwLjYsNy4yaDI5LjhsMC42LTcuMmw2LjUsMTRsLTMuMywyLjRDNjEuMywyNSw2MSwyNSw2MC43LDI1bDAuNi02LjUKCQloLTM3bDAuNiw2LjVjLTAuMywwLTAuNiwwLTAuOSwwLjFsLTMuMy0yLjRMMjcuMyw4Ljd6IE0yOC40LDI3LjRoMy45bDIuNSwyLjRoLTYuNGMwLjEtMC40LDAuMi0wLjgsMC4yLTEuMgoJCUMyOC42LDI4LjIsMjguNSwyNy44LDI4LjQsMjcuNHogTTI3LjQsMjUuOWMtMC4xLTAuMS0wLjMtMC4zLTAuNS0wLjRsLTAuMy0zLjZsNC4xLDMuOWgtMy4zQzI3LjQsMjUuOCwyNy40LDI1LjksMjcuNCwyNS45egoJCSBNMjIuOSw4LjdsLTAuMy0wLjRjLTAuMi0wLjMtMC4zLTAuNy0wLjMtMWMwLTEsMC44LTEuNywxLjctMS43YzEsMCwxLjcsMC44LDEuNywxLjdjMCwwLjIsMCwwLjQtMC4xLDAuNmwtNSwxMC44CgkJYy0wLjEtMS4yLTAuMy0yLjMtMC43LTMuNEwyMi45LDguN3ogTTE1LjIsMzcuNGMwLjQsMC4xLDEuMiwwLjMsMS41LDEuMmw1LjYsMTUuOGwwLjktMC4zYzAuMi0wLjEsMC40LTAuMSwwLjUtMC4xCgkJYzEsMCwxLjcsMC44LDEuNywxLjdzLTAuOCwxLjctMS43LDEuN2MtMC42LDAtMS4xLTAuMy0xLjQtMC43bC03LjgtMTEuMWwwLjUtMC45YzAuMy0wLjYsMC41LTEuMiwwLjUtMS44YzAtMS42LTEuMS0zLTIuNi0zLjQKCQlsMC44LTEuOEMxNCwzNy41LDE0LjYsMzcuMywxNS4yLDM3LjR6IE0xMC43LDM5LjhsMS4xLDEuNWMwLjEsMCwwLjIsMCwwLjMsMGMwLjksMCwxLjYsMC43LDEuNiwxLjZjMCwwLjMtMC4xLDAuNi0wLjIsMC44bC02LjMsMTAKCQlMOCw1NC4yYzAuNSwwLjMsMC44LDAuOSwwLjgsMS40YzAsMS0wLjgsMS43LTEuNywxLjdzLTEuNy0wLjgtMS43LTEuN2MwLTAuMSwwLTAuMiwwLTAuNGw4LjEtMzAuOWwzLjQsMi41TDEwLjcsMzkuOHogTTI1LDMwLjMKCQljLTAuNCwwLTAuOC0wLjEtMS4xLTAuNGwtMTktMTQuMWMtMS44LTEuNC0yLjgtMy41LTIuOC01LjdjMC0zLjMsMi4yLTYuMSw1LjItN3YzLjZjMCwwLjksMC40LDEuNywxLDIuM2MwLjYsMC43LDEuNCwxLDIuMiwxCgkJYzAuMSwwLDAuMSwwLDAuMiwwbDEuNC0wLjFjMC4zLDAuMSwwLjYsMC4yLDAuNywwLjJjMy44LDEuNSw2LjMsNS4yLDYuMyw5LjNjMCwwLjYtMC4xLDEuMy0wLjIsMS45bC00LTIuOWwtMC41LDJsOS4zLDYuOWwwLjUtMC4yCgkJYzAuNC0wLjIsMC45LTAuMiwxLjQsMGMwLjYsMC4zLDEuMSwwLjksMS4xLDEuNmMwLDAuNi0wLjMsMS4xLTAuOCwxLjRDMjUuNiwzMC4yLDI1LjMsMzAuMywyNSwzMC4zeiBNMjcuNCwzMS4zaDguOWwyLjUsMi40SDI3LjcKCQlMMjcuNCwzMS4zeiBNMjcuOCwzNS4yaDEyLjZsMi41LDIuNEgyOC4xTDI3LjgsMzUuMnogTTI4LjIsMzkuMWgxNi4zbDIuNSwyLjRIMjguNEwyOC4yLDM5LjF6IE0yOC44LDQ1LjFsLTAuMi0yaDIwbDIuNSwyLjRIMjguOAoJCUMyOC44LDQ1LjMsMjguOCw0NS4yLDI4LjgsNDUuMXogTTI5LjEsNDdoMjMuNWwyLjUsMi40aC0yNUMyOS43LDQ4LjYsMjkuNCw0Ny44LDI5LjEsNDd6IE00Mi44LDU3LjVjLTIuOCwwLTUuNi0xLTcuOS0yLjZoMTUuOAoJCUM0OC40LDU2LjUsNDUuNiw1Ny41LDQyLjgsNTcuNXogTTUyLjUsNTMuM0gzM2MtMC44LTAuNy0xLjQtMS41LTItMi40aDIzLjZDNTQsNTEuOCw1My4zLDUyLjYsNTIuNSw1My4zeiBNNTYuOCw0NS4xCgkJYy0wLjEsMC45LTAuMywxLjgtMC42LDIuN0wyNy43LDIwLjRoMzEuNWwtMC41LDUuMWMtMSwwLjctMS43LDEuOC0xLjcsMy4xYzAsMSwwLjQsMiwxLjEsMi42TDU2LjgsNDUuMXogTTYxLjcsMjkuOUw2MS43LDI5LjkKCQljLTAuMywwLjMtMC43LDAuNC0xLjEsMC40Yy0wLjMsMC0wLjctMC4xLTEtMC4zYy0wLjUtMC4zLTAuOC0wLjktMC44LTEuNGMwLTAuNywwLjQtMS4zLDEuMS0xLjZjMC40LTAuMiwwLjktMC4yLDEuNCwwbDAuNSwwLjIKCQlsOS4zLTYuOWwtMC41LTJsLTQsMi45Yy0wLjEtMC42LTAuMi0xLjItMC4yLTEuOWMwLTQuMSwyLjUtNy43LDYuMy05LjNjMC4xLDAsMC40LTAuMSwwLjctMC4ybDEuNCwwLjFjMC4xLDAsMC4xLDAsMC4yLDAKCQljMC44LDAsMS42LTAuMywyLjItMC45YzAuNi0wLjYsMS0xLjQsMS0yLjNWMy4xYzMuMSwwLjksNS4yLDMuNyw1LjIsN2MwLDIuMi0xLDQuMy0yLjgsNS43TDYxLjcsMjkuOXogTTYzLjMsNTYuNwoJCWMtMC4zLDAuNS0wLjksMC43LTEuNCwwLjdjLTEsMC0xLjctMC44LTEuNy0xLjdTNjEsNTQsNjEuOSw1NGMwLjIsMCwwLjQsMCwwLjUsMC4xbDAuOSwwLjNsNS42LTE1LjhjMC4zLTAuOSwxLjEtMS4xLDEuNS0xLjIKCQljMC42LTAuMSwxLjIsMC4xLDEuNCwwLjNsMC44LDEuOEM3MS4xLDM5LjksNzAsNDEuMyw3MCw0M2MwLDAuNiwwLjIsMS4zLDAuNSwxLjhsMC41LDAuOUw2My4zLDU2Ljd6IE04MC4zLDU1LjRjMCwwLjEsMCwwLjIsMCwwLjQKCQljMCwxLTAuOCwxLjctMS43LDEuN3MtMS43LTAuOC0xLjctMS43YzAtMC42LDAuMy0xLjEsMC44LTEuNGwwLjgtMC41bC02LjMtMTBDNzIsNDMuNiw3Miw0My40LDcyLDQzLjFjMC0wLjksMC43LTEuNiwxLjYtMS42CgkJYzAuMSwwLDAuMiwwLDAuMywwTDc1LDQwbC02LTEyLjlsMy40LTIuNUw4MC4zLDU1LjR6IE03OC44LDI2LjdjLTAuMy0xLjMtMC4yLTIuMiwwLjQtMi44YzAuNS0wLjYsMS40LTAuOSwyLTAuOQoJCWMwLjgsMCwyLjUsMC4zLDIuNSwyLjljMCwyLjUtMi41LDUuNi0yLjUsNS43bC0wLjgsMUM3OS42LDI5LjUsNzguOSwyNyw3OC44LDI2Ljd6Ii8+CjwvZz4KPGcgaWQ9IlN0YWR0X1rDvHJpY2giPgoJPGc+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xMTIuMiwyLjJjMi4yLDAsMy45LDAuNSw1LjIsMS41YzEuMywxLDEuOSwyLjQsMS45LDQuMmgtMy44YzAtMC45LTAuNC0xLjYtMC45LTJjLTAuNi0wLjQtMS40LTAuNy0yLjYtMC43CgkJCQljLTAuOCwwLTEuNSwwLjItMiwwLjVzLTAuOCwwLjktMC44LDEuNWMwLDAuNSwwLjIsMC45LDAuNSwxLjFjMC4zLDAuMiwwLjcsMC40LDEuMywwLjZjMC42LDAuMiwxLjYsMC40LDMsMC44CgkJCQljMS41LDAuNCwyLjYsMC44LDMuNCwxLjJzMS40LDEsMS44LDEuN3MwLjYsMS41LDAuNiwyLjVjMCwxLjEtMC4zLDIuMS0wLjksM3MtMS41LDEuNi0yLjYsMnMtMi40LDAuNy0zLjksMC43CgkJCQljLTIuMiwwLTQtMC42LTUuNS0xLjdjLTEuNC0xLjEtMi4xLTIuNi0yLjEtNC42di0wLjFoMy44YzAsMSwwLjQsMS45LDEuMSwyLjRjMC43LDAuNiwxLjcsMC45LDIuOCwwLjljMSwwLDEuOS0wLjIsMi41LTAuNgoJCQkJczEtMC45LDEtMS43YzAtMC41LTAuMi0wLjktMC41LTEuMnMtMC44LTAuNi0xLjQtMC44cy0xLjYtMC41LTIuOS0wLjhjLTEuNi0wLjQtMi44LTAuOC0zLjUtMS4zcy0xLjMtMS0xLjctMS42CgkJCQljLTAuNC0wLjYtMC42LTEuNC0wLjYtMi4zYzAtMS4xLDAuMy0yLjEsMS0yLjljMC42LTAuOCwxLjUtMS40LDIuNS0xLjhDMTEwLDIuNCwxMTEuMSwyLjIsMTEyLjIsMi4yeiIvPgoJCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTI2LjQsMy43djMuOWgyLjZWMTBoLTIuNnY2LjRjMCwwLjYsMC4xLDEsMC4zLDEuMmMwLjIsMC4yLDAuNiwwLjMsMS4yLDAuM2MwLjQsMCwwLjgsMCwxLjEtMC4xdjIuOAoJCQkJYy0wLjUsMC4xLTEuMiwwLjEtMi4xLDAuMWMtMS40LDAtMi40LTAuMi0zLTAuN2MtMC43LTAuNS0xLTEuMy0xLTIuNFY5LjloLTIuMVY3LjVoMi4xVjMuN0gxMjYuNHoiLz4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzNy4xLDcuMmMzLjgsMCw1LjYsMS4yLDUuNiwzLjd2Ni44YzAsMS4zLDAuMSwyLjIsMC41LDIuN2gtMy42Yy0wLjEtMC40LTAuMi0wLjgtMC4yLTEuMgoJCQkJYy0xLDEuMS0yLjUsMS42LTQuMywxLjZjLTEuMywwLTIuNC0wLjMtMy4yLTFzLTEuMi0xLjYtMS4yLTIuOHMwLjQtMi4xLDEuMS0yLjdjMC44LTAuNywyLjItMS4xLDQuMi0xLjMKCQkJCWMxLjQtMC4xLDIuMy0wLjMsMi43LTAuNmMwLjQtMC4yLDAuNi0wLjYsMC42LTFjMC0wLjYtMC4yLTEtMC41LTEuM2MtMC40LTAuMy0wLjktMC40LTEuOC0wLjRjLTAuNywwLTEuMywwLjItMS43LDAuNQoJCQkJcy0wLjYsMC44LTAuNywxLjVIMTMxYzAuMS0xLjQsMC43LTIuNSwxLjgtMy4yQzEzMy44LDcuNiwxMzUuMyw3LjIsMTM3LjEsNy4yeiBNMTM0LjEsMTYuOGMwLDEuMSwwLjcsMS42LDIuMiwxLjYKCQkJCWMxLjksMCwyLjktMSwyLjktMi45di0xLjRjLTAuMywwLjMtMSwwLjUtMi4xLDAuNmMtMSwwLjEtMS43LDAuMy0yLjIsMC42QzEzNC40LDE1LjcsMTM0LjEsMTYuMSwxMzQuMSwxNi44eiIvPgoJCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTU4LDIuNnYxNy44aC0zLjR2LTEuNmwwLDBjLTAuOCwxLjMtMi4xLDItMy45LDJjLTEuOCwwLTMuMi0wLjYtNC4yLTEuOXMtMS42LTMtMS42LTVzMC41LTMuNiwxLjYtNC44CgkJCQlzMi40LTEuOSw0LjEtMS45YzAuOCwwLDEuNSwwLjIsMi4yLDAuNXMxLjIsMC44LDEuNiwxLjRoMC4xVjIuNkgxNTh6IE0xNDguNCwxNGMwLDEuMiwwLjMsMi4yLDAuOCwzYzAuNiwwLjgsMS4zLDEuMiwyLjMsMS4yCgkJCQlzMS44LTAuNCwyLjMtMS4xczAuOC0xLjgsMC44LTMuMXMtMC4zLTIuMy0wLjgtM3MtMS4zLTEuMS0yLjMtMS4xcy0xLjgsMC40LTIuMywxLjFDMTQ4LjcsMTEuNywxNDguNCwxMi43LDE0OC40LDE0eiIvPgoJCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTY1LjUsMy43djMuOWgyLjZWMTBoLTIuNnY2LjRjMCwwLjYsMC4xLDEsMC4zLDEuMnMwLjYsMC4zLDEuMiwwLjNjMC40LDAsMC44LDAsMS4xLTAuMXYyLjgKCQkJCWMtMC41LDAuMS0xLjIsMC4xLTIuMSwwLjFjLTEuNCwwLTIuNC0wLjItMy0wLjdjLTAuNy0wLjUtMS0xLjMtMS0yLjRWOS45aC0yLjFWNy41aDIuMVYzLjdIMTY1LjV6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xOTAsMi42djMuMWwtOS42LDExLjRoOS44djMuM2gtMTV2LTMuMWw5LjYtMTEuNEgxNzZWMi42SDE5MHoiLz4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTE5NS42LDcuNXY3LjNjMCwxLDAuMiwxLjgsMC41LDIuM3MwLjksMC44LDEuOCwwLjhjMSwwLDEuNy0wLjMsMi4xLTAuOWMwLjQtMC42LDAuNi0xLjUsMC42LTIuOFY3LjVoMy41CgkJCQl2MTIuOWgtMy40di0xLjhoLTAuMWMtMC45LDEuNC0yLjIsMi4xLTQsMi4xYy0xLjcsMC0yLjktMC40LTMuNi0xLjNjLTAuNy0wLjktMS4xLTIuMi0xLjEtNHYtOEwxOTUuNiw3LjVMMTk1LjYsNy41eiBNMTk3LjMsMi42CgkJCQl2Mi45aC0zLjRWMi42SDE5Ny4zeiBNMjAyLjQsMi42djIuOUgxOTlWMi42SDIwMi40eiIvPgoJCQk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjE0LjcsNy4yYzAuMywwLDAuNiwwLDAuOCwwLjF2My4zYy0wLjQtMC4xLTAuOC0wLjEtMS4zLTAuMWMtMi4zLDAtMy41LDEuNC0zLjUsNC4xdjUuOGgtMy41VjcuNWgzLjR2Mi40CgkJCQlsMCwwYzAuMy0wLjgsMC45LTEuNSwxLjctMkMyMTMsNy40LDIxMy44LDcuMiwyMTQuNyw3LjJ6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0yMjAuOSwyLjZ2Mi45aC0zLjVWMi42SDIyMC45eiBNMjIwLjksNy41djEyLjloLTMuNVY3LjVIMjIwLjl6Ii8+CgkJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0yMjkuNyw3LjJjMS44LDAsMy4yLDAuNCw0LjMsMS4zczEuNywyLjEsMS44LDMuNmgtMy41Yy0wLjItMS41LTEuMS0yLjItMi42LTIuMmMtMC45LDAtMS43LDAuNC0yLjIsMS4xCgkJCQljLTAuNSwwLjgtMC44LDEuOC0wLjgsM3MwLjMsMi4yLDAuOCwyLjlzMS4yLDEuMSwyLjIsMS4xYzEuNiwwLDIuNi0wLjksMi44LTIuNmgzLjRjLTAuMiwxLjctMC45LDMtMiwzLjlzLTIuNSwxLjQtNC4yLDEuNAoJCQkJYy0xLjksMC0zLjUtMC42LTQuNy0xLjhjLTEuMi0xLjItMS44LTIuOC0xLjgtNC44YzAtMi4xLDAuNi0zLjgsMS44LTUuMUMyMjYuMSw3LjgsMjI3LjcsNy4yLDIyOS43LDcuMnoiLz4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTI0MS41LDIuNnY2LjdoMC4xYzAuNC0wLjcsMC45LTEuMiwxLjYtMS42YzAuNy0wLjQsMS40LTAuNiwyLjItMC42YzEuNiwwLDIuOCwwLjQsMy42LDEuMgoJCQkJYzAuNywwLjgsMS4xLDIuMSwxLjEsMy45djguMWgtMy41VjEzYzAtMS0wLjItMS44LTAuNS0yLjNzLTAuOS0wLjgtMS44LTAuOGMtMSwwLTEuNiwwLjMtMi4xLDAuOWMtMC40LDAuNi0wLjcsMS41LTAuNywyLjh2Ni44CgkJCQlIMjM4VjIuNkMyMzcuOSwyLjYsMjQxLjUsMi42LDI0MS41LDIuNnoiLz4KCQk8L2c+Cgk8L2c+CjwvZz4KPC9zdmc+Cg==" alt="Stadt Zürich">
+    <div class="logo-meta">
+      <div class="logo-name">SIGNA</div>
+      <div class="logo-sub">WM Bellevue · Security</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="showScreen('screen-home','Home')">
+      <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Home<span class="nav-badge" id="t3-badge">2</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-map','Live Map')">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M5 1L1 3v9l4-2 4 2 4-2V1l-4 2-4-2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 1v10M9 3v10" stroke="currentColor" stroke-width="1.2"/></svg>
+      Live Map
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-log','Report Log')">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M2 7h7M2 10.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Report Log
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-analytics','Analytics')">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 11L5 6.5l3 2.5 2-4.5L13 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Analytics
+    </div>
+    <div class="nav-item" onclick="showScreen('screen-nodes','Nodes')">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M2 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Nodes
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    nFADP compliant<br>Swiss hosting · 12h deletion<br>No GPS capture
+  </div>
+</div><!-- /sidebar -->
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Home</div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-meta" id="dateLabel"></div>
+    <div class="clock" id="clock"></div>
+    <div class="operator-chip">
+      <div class="op-avatar">SK</div>
+      <span class="op-name">S. Keller</span>
+    </div>
+  </div>
+
+  <!-- ─── HOME ─── -->
+  <section class="screen active" id="screen-home">
+    <div class="content-row">
+    <div class="content">
+
+      <!-- Alert tray -->
+      <div class="alert-tray">
+        <div class="alert-tray-scan"></div>
+        <div class="alert-header">
+          <div class="alert-pulse"></div>
+          <div class="alert-title">Active Tier 3 — Priority Review</div>
+          <div class="alert-count">2 requiring action</div>
+        </div>
+        <div class="alert-items">
+          <div class="alert-item" onclick="openAlert(0)">
+            <span class="tier-badge t3">TIER 3</span>
+            <span class="alert-loc">Baumring Nord</span>
+            <span class="alert-desc">3 categories · assault/threatening · person in distress · jetzt gerade</span>
+            <span class="alert-time">17:34</span>
+            <button class="alert-action" onclick="event.stopPropagation();openAlert(0)">Review →</button>
+          </div>
+          <div class="alert-item" onclick="openAlert(1)">
+            <span class="tier-badge t3">TIER 3</span>
+            <span class="alert-loc">Glühwein Cluster A (Nord)</span>
+            <span class="alert-desc">Unattended bag · black backpack under table · nobody nearby</span>
+            <span class="alert-time">17:18</span>
+            <button class="alert-action" onclick="event.stopPropagation();openAlert(1)">Review →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Reports today</div>
+          <div class="stat-value">31</div>
+          <div class="stat-delta delta-up">↑ 8 vs yesterday</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tier 3 alerts</div>
+          <div class="stat-value" style="color:var(--red)">2</div>
+          <div class="stat-delta delta-neutral">Requiring review</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Unattended items</div>
+          <div class="stat-value" style="color:var(--yellow)">3</div>
+          <div class="stat-delta delta-neutral">Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Resolved</div>
+          <div class="stat-value" style="color:#22c55e">26</div>
+          <div class="stat-delta delta-up">84% resolution</div>
+        </div>
+      </div>
+
+      <!-- Recent log -->
+      <div style="background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;">
+        <div style="padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <div style="font-size:11px;font-weight:600;">Recent Reports</div>
+          <div style="margin-left:auto;font-size:10px;color:var(--text3);">Last 3 hours</div>
+        </div>
+        <div id="home-log"></div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Alert detail panel -->
+    <div class="detail-panel" id="home-alertPanel">
+      <div class="detail-header">
+        <div class="detail-title" id="home-alertTitle">—</div>
+        <button class="detail-close" onclick="closeAlert()">×</button>
+      </div>
+      <div class="detail-body" id="home-alertBody"></div>
+    </div>
+    </div><!-- /content-row -->
+  </section>
+
+  <!-- ─── MAP ─── -->
+  <section class="screen" id="screen-map">
+    <div class="filter-bar">
+      <span class="filter-label">Filter</span>
+      <div class="chip active" onclick="mapFilter('all',this)">All</div>
+      <div class="chip" onclick="mapFilter('t3',this)">Tier 3</div>
+      <div class="chip" onclick="mapFilter('t2plus',this)">T2+</div>
+      <span class="filter-sep"></span>
+      <div class="chip" onclick="mapFilter('ub',this)">Unattended items</div>
+    </div>
+    <div class="map-shell">
+      <div class="map-wrap" id="mapWrap">
+        <div class="map-inner" id="mapInner">
+          <svg id="mapSvg" width="800" height="640" viewBox="0 0 800 640" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background -->
+            <rect width="800" height="640" fill="#07090d"/>
+            <!-- Sechseläutenplatz outline -->
+            <rect x="80" y="60" width="640" height="520" rx="18" fill="#0d1018" stroke="#ffffff10" stroke-width="1"/>
+            <!-- Opernhaus building -->
+            <rect x="100" y="80" width="160" height="120" rx="6" fill="#141820" stroke="#ffffff18" stroke-width="0.8"/>
+            <text x="180" y="147" text-anchor="middle" font-size="9" fill="#4e545e" font-family="sans-serif">Opernhaus</text>
+            <!-- Utoquai road -->
+            <rect x="60" y="60" width="22" height="520" rx="0" fill="#0a0c12" stroke="#ffffff08" stroke-width="0.5"/>
+            <text x="71" y="330" text-anchor="middle" font-size="7" fill="#2e3440" font-family="sans-serif" transform="rotate(-90,71,330)">UTOQUAI</text>
+            <!-- Bellevue road top -->
+            <rect x="80" y="38" width="640" height="24" rx="0" fill="#0a0c12" stroke="#ffffff08" stroke-width="0.5"/>
+            <text x="400" y="53" text-anchor="middle" font-size="7" fill="#2e3440" font-family="sans-serif">BELLEVUEPLATZ</text>
+            <!-- Stadelhofen road right -->
+            <rect x="718" y="60" width="22" height="520" rx="0" fill="#0a0c12" stroke="#ffffff08" stroke-width="0.5"/>
+            <text x="729" y="330" text-anchor="middle" font-size="7" fill="#2e3440" font-family="sans-serif" transform="rotate(90,729,330)">STADELHOFEN</text>
+
+            <!-- Zone: Baumring (centre cluster) -->
+            <circle cx="400" cy="330" r="90" fill="#1a1e28" stroke="#2918c430" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="400" y="250" text-anchor="middle" font-size="9" fill="#2918c4" font-family="sans-serif" font-weight="600" letter-spacing="0.08em">BAUMRING</text>
+            <!-- Christmas tree symbol -->
+            <text x="400" y="340" text-anchor="middle" font-size="28" font-family="sans-serif">🎄</text>
+
+            <!-- Zone: Opernhaus side (west) -->
+            <rect x="95" y="215" width="170" height="250" rx="6" fill="#141820" stroke="#ffffff0a" stroke-width="0.8"/>
+            <text x="180" y="345" text-anchor="middle" font-size="8" fill="#3a3f50" font-family="sans-serif">OPERNHAUS-SEITE</text>
+
+            <!-- Zone: Seeseite (east) -->
+            <rect x="535" y="215" width="170" height="250" rx="6" fill="#141820" stroke="#ffffff0a" stroke-width="0.8"/>
+            <text x="620" y="345" text-anchor="middle" font-size="8" fill="#3a3f50" font-family="sans-serif">SEESEITE</text>
+
+            <!-- Zone: Karusell Nord -->
+            <rect x="220" y="70" width="360" height="130" rx="6" fill="#141820" stroke="#ffffff0a" stroke-width="0.8"/>
+            <text x="400" y="140" text-anchor="middle" font-size="8" fill="#3a3f50" font-family="sans-serif">KARUSELL / NORD</text>
+
+            <!-- Zone: Bellevue Eingang (top) -->
+            <rect x="280" y="42" width="240" height="30" rx="4" fill="#1a1e28" stroke="#2918c420" stroke-width="0.8"/>
+            <text x="400" y="61" text-anchor="middle" font-size="8" fill="#2918c4" font-family="sans-serif">BELLEVUE-EINGANG</text>
+
+            <!-- Zone: Utoquai Eingang (left) -->
+            <rect x="82" y="290" width="18" height="100" rx="3" fill="#1a1e28" stroke="#2918c420" stroke-width="0.8"/>
+
+            <!-- Zone: Verpflegung -->
+            <rect x="220" y="430" width="220" height="120" rx="6" fill="#141820" stroke="#ffffff0a" stroke-width="0.8"/>
+            <text x="330" y="495" text-anchor="middle" font-size="8" fill="#3a3f50" font-family="sans-serif">VERPFLEGUNG</text>
+
+            <!-- Zone: Glühwein -->
+            <rect x="450" y="430" width="180" height="120" rx="6" fill="#141820" stroke="#d9770618" stroke-width="0.8"/>
+            <text x="540" y="495" text-anchor="middle" font-size="8" fill="#6b4f10" font-family="sans-serif">GLÜHWEIN</text>
+
+            <!-- Zone: Info-Punkt -->
+            <rect x="362" y="565" width="76" height="30" rx="4" fill="#1a1e28" stroke="#ffffff0a" stroke-width="0.8"/>
+            <text x="400" y="583" text-anchor="middle" font-size="7" fill="#3a3f50" font-family="sans-serif">INFO-PUNKT</text>
+
+            <!-- ── NODE PINS ── -->
+            <!-- TREE-N T3 red -->
+            <circle cx="400" cy="264" r="7" fill="#dc2626" stroke="#dc262660" stroke-width="4" class="map-pin" data-node="TREE-N" data-tier="3" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- TREE-S T1 blue -->
+            <circle cx="400" cy="398" r="6" fill="#2918c4" stroke="#2918c430" stroke-width="3" class="map-pin" data-node="TREE-S" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- TREE-E T2 amber -->
+            <circle cx="468" cy="330" r="6" fill="#d97706" stroke="#d9770630" stroke-width="3" class="map-pin" data-node="TREE-E" data-tier="2" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- TREE-W T1 -->
+            <circle cx="332" cy="330" r="6" fill="#2918c4" stroke="#2918c430" stroke-width="3" class="map-pin" data-node="TREE-W" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- OPR-N T1 -->
+            <circle cx="170" cy="240" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="OPR-N" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- OPR-M T1 -->
+            <circle cx="170" cy="340" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="OPR-M" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- OPR-S T1 -->
+            <circle cx="170" cy="430" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="OPR-S" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- BEL-A T1 -->
+            <circle cx="340" cy="57" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="BEL-A" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- BEL-B T1 -->
+            <circle cx="460" cy="57" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="BEL-B" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- UTO-A T1 -->
+            <circle cx="91" cy="300" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="UTO-A" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- UTO-B T1 -->
+            <circle cx="91" cy="360" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="UTO-B" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- KAR-A T2 -->
+            <circle cx="310" cy="120" r="6" fill="#d97706" stroke="#d9770630" stroke-width="3" class="map-pin" data-node="KAR-A" data-tier="2" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- KAR-B T1 -->
+            <circle cx="400" cy="110" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="KAR-B" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- KAR-C T1 -->
+            <circle cx="490" cy="120" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="KAR-C" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- SEE-N T1 -->
+            <circle cx="620" cy="260" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="SEE-N" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- SEE-S T1 -->
+            <circle cx="620" cy="400" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="SEE-S" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- FOOD-A T1 -->
+            <circle cx="260" cy="470" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="FOOD-A" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- FOOD-B T1 -->
+            <circle cx="330" cy="510" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="FOOD-B" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- FOOD-C T1 -->
+            <circle cx="400" cy="470" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="FOOD-C" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- GLUE-A UB yellow -->
+            <circle cx="490" cy="460" r="7" fill="#FCD34D" stroke="#FCD34D60" stroke-width="4" class="map-pin" data-node="GLUE-A" data-tier="ub" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- GLUE-B T1 -->
+            <circle cx="580" cy="510" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="GLUE-B" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+            <!-- INFO-M T1 -->
+            <circle cx="400" cy="580" r="5" fill="#2918c4" stroke="#2918c420" stroke-width="2" class="map-pin" data-node="INFO-M" data-tier="1" onclick="mapPinClick(this)" style="cursor:pointer"/>
+
+            <!-- Scan count labels on active pins -->
+            <text x="400" y="261" text-anchor="middle" font-size="7" fill="#fff" font-weight="700" pointer-events="none">3</text>
+            <text x="490" y="460" text-anchor="middle" font-size="7" fill="#1a1200" font-weight="700" pointer-events="none">!</text>
+          </svg>
+        </div>
+      </div>
+      <!-- Map detail panel -->
+      <div class="detail-panel" id="map-panel">
+        <div class="detail-header">
+          <div class="detail-title" id="map-panel-title">—</div>
+          <button class="detail-close" onclick="closeMapPanel()">×</button>
+        </div>
+        <div class="detail-body" id="map-panel-body"></div>
+      </div>
+      <div class="zoom-controls">
+        <button class="zbtn" onclick="zoom(1.2)">+</button>
+        <button class="zbtn" onclick="zoom(0.85)">−</button>
+        <button class="zbtn" onclick="resetZoom()" style="font-size:11px;">⌂</button>
+      </div>
+      <div class="legend">
+        <div class="leg-row"><div class="leg-dot" style="background:#dc2626;box-shadow:0 0 4px #dc262680"></div>Tier 3 — Priority review</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#d97706"></div>Tier 2 — Triage queue</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#2918c4"></div>Tier 1 — Logged</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#FCD34D"></div>Unattended item</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── LOG ─── -->
+  <section class="screen" id="screen-log">
+    <div class="filter-bar">
+      <span class="filter-label">Tier</span>
+      <div class="chip active" onclick="logFilter('all',this)">All</div>
+      <div class="chip" onclick="logFilter('3',this)">T3</div>
+      <div class="chip" onclick="logFilter('2',this)">T2</div>
+      <div class="chip" onclick="logFilter('1',this)">T1</div>
+      <div class="chip" onclick="logFilter('ub',this)">Unattended</div>
+      <span class="filter-sep"></span>
+      <span class="filter-label">Zone</span>
+      <div class="chip active" onclick="logZone('all',this)">All zones</div>
+      <div class="chip" onclick="logZone('TREE',this)">Baumring</div>
+      <div class="chip" onclick="logZone('OPR',this)">Opernhaus</div>
+      <div class="chip" onclick="logZone('KAR',this)">Karusell</div>
+      <div class="chip" onclick="logZone('FOOD',this)">Verpflegung</div>
+      <div class="chip" onclick="logZone('GLUE',this)">Glühwein</div>
+    </div>
+    <div class="log-table-wrap">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Tier</th><th>Location</th><th>Categories</th><th>When</th><th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── ANALYTICS ─── -->
+  <section class="screen" id="screen-analytics">
+    <div class="analytics-grid">
+
+      <div class="chart-card">
+        <div class="chart-title">Reports by category</div>
+        <div class="chart-sub">Today · all tiers</div>
+        <div class="bar-chart">
+          <div class="bar-row"><div class="bar-label">Assault / threatening</div><div class="bar-track"><div class="bar-fill" style="width:38%;background:#dc2626"></div></div><div class="bar-val">9</div></div>
+          <div class="bar-row"><div class="bar-label">Intoxicated person</div><div class="bar-track"><div class="bar-fill" style="width:29%;background:#2918c4"></div></div><div class="bar-val">7</div></div>
+          <div class="bar-row"><div class="bar-label">Unattended item</div><div class="bar-track"><div class="bar-fill" style="width:13%;background:#FCD34D"></div></div><div class="bar-val">3</div></div>
+          <div class="bar-row"><div class="bar-label">Suspicious behaviour</div><div class="bar-track"><div class="bar-fill" style="width:17%;background:#d97706"></div></div><div class="bar-val">4</div></div>
+          <div class="bar-row"><div class="bar-label">Person in distress</div><div class="bar-track"><div class="bar-fill" style="width:17%;background:#d97706"></div></div><div class="bar-val">4</div></div>
+          <div class="bar-row"><div class="bar-label">Medical emergency</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:#dc2626"></div></div><div class="bar-val">2</div></div>
+          <div class="bar-row"><div class="bar-label">Drink spiking</div><div class="bar-track"><div class="bar-fill" style="width:4%;background:#d97706"></div></div><div class="bar-val">1</div></div>
+          <div class="bar-row"><div class="bar-label">Unattended child</div><div class="bar-track"><div class="bar-fill" style="width:4%;background:#d97706"></div></div><div class="bar-val">1</div></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Reports by zone</div>
+        <div class="chart-sub">Today · scan origin</div>
+        <div class="bar-chart">
+          <div class="bar-row"><div class="bar-label">Baumring</div><div class="bar-track"><div class="bar-fill" style="width:42%;background:#2918c4"></div></div><div class="bar-val">13</div></div>
+          <div class="bar-row"><div class="bar-label">Glühwein</div><div class="bar-track"><div class="bar-fill" style="width:19%;background:#d97706"></div></div><div class="bar-val">6</div></div>
+          <div class="bar-row"><div class="bar-label">Karusell/Nord</div><div class="bar-track"><div class="bar-fill" style="width:16%;background:#2918c4"></div></div><div class="bar-val">5</div></div>
+          <div class="bar-row"><div class="bar-label">Opernhaus-Seite</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#2918c4"></div></div><div class="bar-val">3</div></div>
+          <div class="bar-row"><div class="bar-label">Verpflegung</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#2918c4"></div></div><div class="bar-val">3</div></div>
+          <div class="bar-row"><div class="bar-label">Seeseite</div><div class="bar-track"><div class="bar-fill" style="width:3%;background:#2918c4"></div></div><div class="bar-val">1</div></div>
+        </div>
+      </div>
+
+      <div class="chart-card full">
+        <div class="chart-title">Reports by hour</div>
+        <div class="chart-sub">Today · peak 17:00–18:00</div>
+        <div class="time-bars" id="hourBars"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Tier distribution</div>
+        <div class="chart-sub">Today · 31 total</div>
+        <div class="donut-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="28" fill="none" stroke="#1a1e28" stroke-width="14"/>
+            <circle cx="40" cy="40" r="28" fill="none" stroke="#dc2626" stroke-width="14" stroke-dasharray="32 144" stroke-dashoffset="-72" transform="rotate(-90 40 40)"/>
+            <circle cx="40" cy="40" r="28" fill="none" stroke="#d97706" stroke-width="14" stroke-dasharray="51 125" stroke-dashoffset="-40" transform="rotate(-90 40 40)"/>
+            <circle cx="40" cy="40" r="28" fill="none" stroke="#2918c4" stroke-width="14" stroke-dasharray="93 83" stroke-dashoffset="11" transform="rotate(-90 40 40)"/>
+            <text x="40" y="44" text-anchor="middle" font-size="12" font-weight="700" fill="#e8eaed" font-family="sans-serif">31</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="donut-leg-row"><div class="donut-dot" style="background:#dc2626"></div>Tier 3 · 7 (23%)</div>
+            <div class="donut-leg-row"><div class="donut-dot" style="background:#d97706"></div>Tier 2 · 11 (35%)</div>
+            <div class="donut-leg-row"><div class="donut-dot" style="background:#2918c4"></div>Tier 1 · 13 (42%)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Data note</div>
+        <div class="data-note">Scan counts reflect reports received, not crowd density or incident frequency. Low counts may indicate low visibility of QR codes, reduced foot traffic, or low reporter uptake — not absence of incidents. Security decisions should not be based on scan volume alone.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── NODES ─── -->
+  <section class="screen" id="screen-nodes">
+    <div class="nodes-grid" id="nodes-grid"></div>
+  </section>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── Clock & date ──
+function tick(){
+  const n=new Date();
+  const h=String(n.getHours()).padStart(2,'0');
+  const m=String(n.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent=h+':'+m;
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dateLabel').textContent=days[n.getDay()]+', '+n.getDate()+' '+months[n.getMonth()];
+}
+tick(); setInterval(tick,10000);
+
+// ── Screen switching ──
+function showScreen(id, title){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('topbar-title').textContent=title;
+  document.querySelectorAll('.nav-item').forEach(function(n){
+    var oc=n.getAttribute('onclick')||'';
+    if(oc.indexOf("'"+id+"'")!==-1) n.classList.add('active');
+  });
+}
+
+// ── Data ──
+const NODES=[
+  {id:'TREE-N',name:'Baumring Nord',zone:'Baumring',reports:3,tier:3},
+  {id:'TREE-S',name:'Baumring Süd',zone:'Baumring',reports:1,tier:1},
+  {id:'TREE-E',name:'Baumring Ost (Seeseite)',zone:'Baumring',reports:2,tier:2},
+  {id:'TREE-W',name:'Baumring West (Opernhaus)',zone:'Baumring',reports:1,tier:1},
+  {id:'OPR-N',name:'Opernhaus Nord',zone:'Opernhaus',reports:1,tier:1},
+  {id:'OPR-M',name:'Opernhaus Mitte',zone:'Opernhaus',reports:0,tier:0},
+  {id:'OPR-S',name:'Opernhaus Süd',zone:'Opernhaus',reports:1,tier:1},
+  {id:'BEL-A',name:'Bellevue Eingang A (Tram)',zone:'Bellevue-Eingang',reports:0,tier:0},
+  {id:'BEL-B',name:'Bellevue Eingang B (Fuss)',zone:'Bellevue-Eingang',reports:1,tier:1},
+  {id:'UTO-A',name:'Utoquai Eingang A',zone:'Utoquai-Eingang',reports:0,tier:0},
+  {id:'UTO-B',name:'Utoquai Eingang B',zone:'Utoquai-Eingang',reports:0,tier:0},
+  {id:'KAR-A',name:'Karusell Zone A',zone:'Karusell/Nord',reports:2,tier:2},
+  {id:'KAR-B',name:'Karusell Zone B',zone:'Karusell/Nord',reports:1,tier:1},
+  {id:'KAR-C',name:'Nord Standreihe C',zone:'Karusell/Nord',reports:1,tier:1},
+  {id:'SEE-N',name:'Seeseite Nord',zone:'Seeseite',reports:0,tier:0},
+  {id:'SEE-S',name:'Seeseite Süd',zone:'Seeseite',reports:1,tier:1},
+  {id:'FOOD-A',name:'Verpflegung Stand A',zone:'Verpflegung',reports:1,tier:1},
+  {id:'FOOD-B',name:'Verpflegung Stand B',zone:'Verpflegung',reports:0,tier:0},
+  {id:'FOOD-C',name:'Verpflegung Stand C',zone:'Verpflegung',reports:1,tier:1},
+  {id:'GLUE-A',name:'Glühwein Cluster A (Nord)',zone:'Glühwein',reports:2,tier:'ub'},
+  {id:'GLUE-B',name:'Glühwein Cluster B (Süd)',zone:'Glühwein',reports:1,tier:1},
+  {id:'INFO-M',name:'Info-Punkt Mitte',zone:'Info-Punkt',reports:0,tier:0},
+];
+
+const REPORTS=[
+  {id:'RPT-031',tier:3,tierStr:'t3',loc:'Baumring Nord',node:'TREE-N',zone:'TREE',when:'right now',time:'17:34',
+   cats:['Assault / threatening','Person in distress','Suspicious behaviour'],
+   desc:'Man in dark jacket aggressively grabbing woman by arm near Christmas tree. She appears very distressed and is trying to pull away.',
+   phone:'+41 79 244 87 32',type:'person'},
+  {id:'RPT-030',tier:'ub',tierStr:'tub',loc:'Glühwein Cluster A (Nord)',node:'GLUE-A',zone:'GLUE',when:'right now',time:'17:18',
+   cats:['Unattended bag — Backpack'],
+   desc:'Black backpack left under the table at Glühwein Cluster A. Nobody nearby for at least 10 minutes.',
+   phone:null,type:'item'},
+  {id:'RPT-029',tier:2,tierStr:'t2',loc:'Karusell Zone A',node:'KAR-A',zone:'KAR',when:'earlier today',time:'16:55',
+   cats:['Sexual harassment','Drink spiking'],
+   desc:'Man near carousel repeatedly approaching women. Witnesses saw him adding something to drinks.',
+   phone:'+41 76 311 90 44',type:'person'},
+  {id:'RPT-028',tier:2,tierStr:'t2',loc:'Baumring Ost (Seeseite)',node:'TREE-E',zone:'TREE',when:'earlier today',time:'16:41',
+   cats:['Intoxicated person','Suspicious behaviour'],
+   desc:'Heavily intoxicated man, mid 50s, red coat, stumbling near stalls and shouting at visitors.',
+   phone:null,type:'person'},
+  {id:'RPT-027',tier:1,tierStr:'t1',loc:'Baumring West (Opernhaus)',node:'TREE-W',zone:'TREE',when:'earlier today',time:'16:22',
+   cats:['Person in distress'],
+   desc:'Elderly woman sitting on ground near tree, seems confused and lost.',
+   phone:null,type:'person'},
+  {id:'RPT-026',tier:1,tierStr:'t1',loc:'Verpflegung Stand C',node:'FOOD-C',zone:'FOOD',when:'earlier today',time:'16:08',
+   cats:['Unattended child'],
+   desc:'Young girl approx 6 years old standing alone near food stand for several minutes, crying.',
+   phone:'+41 78 900 12 34',type:'person'},
+  {id:'RPT-025',tier:2,tierStr:'t2',loc:'Baumring Nord',node:'TREE-N',zone:'TREE',when:'earlier today',time:'15:50',
+   cats:['Person in distress','Assault / threatening'],
+   desc:'Loud argument between two men, one threatening the other physically.',
+   phone:null,type:'person'},
+  {id:'RPT-024',tier:'ub',tierStr:'tub',loc:'Verpflegung Stand A',node:'FOOD-A',zone:'FOOD',when:'earlier today',time:'15:30',
+   cats:['Unattended bag — Bag / luggage'],
+   desc:'Large rolling suitcase left at entrance to food area. Owner not visible.',
+   phone:null,type:'item'},
+  {id:'RPT-023',tier:1,tierStr:'t1',loc:'Opernhaus Nord',node:'OPR-N',zone:'OPR',when:'earlier today',time:'15:12',
+   cats:['Suspicious behaviour'],
+   desc:'Person photographing stall operators closely, behaviour seemed intrusive.',
+   phone:null,type:'person'},
+  {id:'RPT-022',tier:1,tierStr:'t1',loc:'Glühwein Cluster B (Süd)',node:'GLUE-B',zone:'GLUE',when:'earlier today',time:'14:48',
+   cats:['Intoxicated person'],
+   desc:'Very drunk man lying against stall wall, not responding to people talking to him.',
+   phone:null,type:'person'},
+];
+
+const NODE_MAP={};
+NODES.forEach(function(n){ NODE_MAP[n.id]=n; });
+
+// ── Detail panel shared builder ──
+function buildDetailHTML(r){
+  var tcolor=r.tier===3?'var(--red)':r.tier==='ub'?'var(--yellow)':r.tier===2?'var(--amber)':'#6b8fff';
+  var catList=r.cats.map(function(c){
+    return '<div class="detail-ind"><span class="detail-ind-dot" style="background:'+tcolor+'"></span>'+c+'</div>';
+  }).join('');
+  var phoneSection=r.phone
+    ?'<div class="detail-section"><div class="detail-section-label">Contact (reporter)</div><div class="phone-val">'+r.phone+'</div><div class="detail-value-sub" style="margin-top:3px">Provided voluntarily · handle per protocol</div></div>'
+    :'<div class="detail-section"><div class="detail-section-label">Contact (reporter)</div><div class="detail-value-sub" style="color:var(--text3)">Anonymous — no contact provided</div></div>';
+  var tierLabel=r.tier==='ub'?'UNATTENDED ITEM':'TIER '+r.tier;
+  return (
+    '<div class="detail-section"><div class="detail-section-label">Location</div><div class="detail-value">'+r.loc+'</div><div class="detail-value-sub" style="font-family:var(--mono);font-size:10px">'+r.node+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-label">Timestamp</div><div class="detail-value">'+r.time+' · '+r.when+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-label">Triage tier</div><div><span class="tier-badge '+r.tierStr+'" style="font-size:11px;padding:4px 10px">'+tierLabel+'</span></div></div>'+
+    '<div class="detail-section"><div class="detail-section-label">Categories</div><div class="detail-inds">'+catList+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-label">Description</div><div class="desc-box">'+r.desc+'</div></div>'+
+    phoneSection+
+    '<div class="forwarded-label">Forwarded to: Security</div>'+
+    '<div class="detail-divider"></div>'+
+    '<div class="detail-section"><div class="detail-section-label" style="margin-bottom:6px">Officer notes</div><textarea class="officer-note" placeholder="Add notes, outcome, referral…"></textarea></div>'+
+    '<div class="action-row"><button class="action-btn action-resolve">✓ Resolve</button><button class="action-btn action-escalate">↑ Escalate</button></div>'
+  );
+}
+
+// ── Open detail ──
+function openLogDetail(id){
+  var r=REPORTS.find(function(x){ return x.id===id; });
+  if(!r) return;
+  var onHome=document.getElementById('screen-home').classList.contains('active');
+  var panel=onHome?document.getElementById('home-alertPanel'):document.getElementById('map-panel');
+  var titleEl=onHome?document.getElementById('home-alertTitle'):document.getElementById('map-panel-title');
+  var bodyEl=onHome?document.getElementById('home-alertBody'):document.getElementById('map-panel-body');
+  titleEl.textContent=r.loc+' · '+r.id;
+  bodyEl.innerHTML=buildDetailHTML(r);
+  panel.classList.add('open');
+}
+
+// ── Home alerts ──
+function openAlert(idx){
+  var ids=['RPT-031','RPT-030'];
+  openLogDetail(ids[idx]);
+  var panel=document.getElementById('home-alertPanel');
+  var titleEl=document.getElementById('home-alertTitle');
+  var r=REPORTS.find(function(x){ return x.id===ids[idx]; });
+  if(r) titleEl.textContent=r.loc;
+  panel.classList.add('open');
+}
+function closeAlert(){ document.getElementById('home-alertPanel').classList.remove('open'); }
+function closeMapPanel(){ document.getElementById('map-panel').classList.remove('open'); }
+
+// ── Home log ──
+function renderHomeLog(){
+  var el=document.getElementById('home-log');
+  var rows=REPORTS.slice(0,8);
+  el.innerHTML=rows.map(function(r){
+    var extra=r.cats.length>1?' +'+(r.cats.length-1):'';
+    var tierLabel=r.tier==='ub'?'UB':'T'+r.tier;
+    return '<div data-rid="'+r.id+'" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;">'+
+      '<span class="tier-badge '+r.tierStr+'">'+tierLabel+'</span>'+
+      '<div style="flex:1"><div class="log-loc">'+r.loc+'</div><div class="log-loc-sub">'+r.cats[0]+extra+'</div></div>'+
+      '<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">'+r.time+'</span>'+
+      '</div>';
+  }).join('');
+  el.querySelectorAll('[data-rid]').forEach(function(div){
+    div.addEventListener('click',function(){ openLogDetail(this.getAttribute('data-rid')); });
+  });
+}
+
+// ── Log screen ──
+var logTierFilter='all', logZoneFilter='all';
+function renderLog(){
+  var rows=REPORTS;
+  if(logTierFilter!=='all') rows=rows.filter(function(r){ return String(r.tier)===logTierFilter; });
+  if(logZoneFilter!=='all') rows=rows.filter(function(r){ return r.zone===logZoneFilter; });
+  var tbody=document.getElementById('log-body');
+  tbody.innerHTML=rows.map(function(r){
+    var tierLabel=r.tier==='ub'?'UB':'T'+r.tier;
+    var cats=r.cats.map(function(c){ return '<span class="ind-tag">'+c+'</span>'; }).join('');
+    return '<tr data-rid="'+r.id+'" style="cursor:pointer">'+
+      '<td><span class="tier-badge '+r.tierStr+'">'+tierLabel+'</span></td>'+
+      '<td><div class="log-loc">'+r.loc+'</div><div class="log-loc-sub" style="font-family:var(--mono);font-size:9px">'+r.node+'</div></td>'+
+      '<td>'+cats+'</td>'+
+      '<td style="color:var(--text3);font-size:11px">'+r.when+'</td>'+
+      '<td class="log-time">'+r.time+'</td>'+
+      '</tr>';
+  }).join('');
+  tbody.querySelectorAll('[data-rid]').forEach(function(tr){
+    tr.addEventListener('click',function(){ openLogDetail(this.getAttribute('data-rid')); });
+  });
+}
+function logFilter(tier,el){
+  logTierFilter=tier;
+  document.querySelectorAll('#screen-log .filter-bar .chip').forEach(function(c){ c.classList.remove('active','am-active'); });
+  el.classList.add('active');
+  renderLog();
+}
+function logZone(zone,el){
+  logZoneFilter=zone;
+  // Only remove zone chip actives
+  document.querySelectorAll('#screen-log .filter-bar .chip').forEach(function(c){
+    var oc=c.getAttribute('onclick')||'';
+    if(oc.indexOf('logZone')!==-1) c.classList.remove('active');
+  });
+  el.classList.add('active');
+  renderLog();
+}
+
+// ── Map filter ──
+function mapFilter(f,el){
+  document.querySelectorAll('#screen-map .filter-bar .chip').forEach(function(c){ c.classList.remove('active','am-active'); });
+  el.classList.add(f==='ub'?'am-active':'active');
+  document.querySelectorAll('.map-pin').forEach(function(p){
+    var t=p.getAttribute('data-tier');
+    if(f==='all') p.style.opacity='';
+    else if(f==='t3') p.style.opacity=t==='3'?'1':'0.06';
+    else if(f==='t2plus') p.style.opacity=(t==='3'||t==='2')?'1':'0.06';
+    else if(f==='ub') p.style.opacity=t==='ub'?'1':'0.06';
+  });
+}
+
+// ── Map pin click ──
+function mapPinClick(el){
+  var nodeId=el.getAttribute('data-node');
+  var node=NODE_MAP[nodeId];
+  if(!node) return;
+  var r=REPORTS.find(function(x){ return x.node===nodeId; });
+  var panel=document.getElementById('map-panel');
+  document.getElementById('map-panel-title').textContent=node.name;
+  var latestHTML='<div class="detail-section"><div class="detail-value-sub" style="color:var(--text3)">No reports at this node today.</div></div>';
+  if(r){
+    latestHTML='<div class="detail-section"><div class="detail-section-label">Latest report</div>'+
+      '<div data-rid="'+r.id+'" style="cursor:pointer;padding:8px;background:var(--bg3);border-radius:6px;border:0.5px solid var(--border2);">'+
+      '<div class="log-loc" style="font-size:12px">'+r.cats[0]+'</div>'+
+      '<div class="log-loc-sub">'+r.time+' · '+r.when+'</div></div></div>';
+  }
+  document.getElementById('map-panel-body').innerHTML=
+    '<div class="detail-section"><div class="detail-section-label">Node</div><div class="detail-value" style="font-family:var(--mono);font-size:11px">'+nodeId+'</div><div class="detail-value-sub">'+node.zone+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-label">Reports today</div><div class="detail-value">'+node.reports+'</div></div>'+
+    latestHTML;
+  panel.classList.add('open');
+  // Attach click on the latest report card if present
+  var card=panel.querySelector('[data-rid]');
+  if(card) card.addEventListener('click',function(){ openLogDetail(this.getAttribute('data-rid')); });
+}
+
+// ── Map pan/zoom ──
+var scale=1,tx=0,ty=0,dragging=false,startX,startY,startTx,startTy;
+var wrap=document.getElementById('mapWrap');
+var inner=document.getElementById('mapInner');
+function applyTransform(){ inner.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; }
+wrap.addEventListener('mousedown',function(e){ dragging=true;startX=e.clientX;startY=e.clientY;startTx=tx;startTy=ty;wrap.classList.add('dragging'); });
+window.addEventListener('mouseup',function(){ dragging=false;wrap.classList.remove('dragging'); });
+window.addEventListener('mousemove',function(e){ if(!dragging)return;tx=startTx+(e.clientX-startX);ty=startTy+(e.clientY-startY);applyTransform(); });
+wrap.addEventListener('wheel',function(e){ e.preventDefault();var d=e.deltaY>0?0.9:1.1;scale=Math.max(0.4,Math.min(3,scale*d));applyTransform(); },{passive:false});
+function zoom(f){ scale=Math.max(0.4,Math.min(3,scale*f));applyTransform(); }
+function resetZoom(){ scale=1;tx=0;ty=0;applyTransform(); }
+
+// ── Hour bars ──
+function renderHourBars(){
+  var data=[0,0,0,0,0,0,0,0,1,1,2,2,3,4,5,7,9,8,0,0,0,0,0,0];
+  var max=Math.max.apply(null,data);
+  var peak=data.indexOf(max);
+  document.getElementById('hourBars').innerHTML=data.map(function(v,i){
+    return '<div class="time-bar-wrap">'+
+      '<div class="time-bar'+(i===peak?' peak':'')+'" style="height:'+(v/max*54+2)+'px"></div>'+
+      '<div class="time-bar-label">'+(i%3===0?String(i).padStart(2,'0'):'')+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+// ── Nodes screen ──
+function renderNodes(){
+  document.getElementById('nodes-grid').innerHTML=NODES.map(function(n){
+    var hasReport=n.reports>0;
+    return '<div class="node-card">'+
+      '<div class="node-id">'+n.id+'</div>'+
+      '<div class="node-name">'+n.name+'</div>'+
+      '<div class="node-zone">'+n.zone+'</div>'+
+      '<div class="node-status"><div class="node-dot '+(hasReport?'ok':'idle')+'"></div>'+
+      '<span class="node-status-label">'+(hasReport?n.reports+' report'+(n.reports>1?'s':''):'No reports today')+'</span></div>'+
+      '</div>';
+  }).join('');
+}
+
+// ── Init ──
+renderHomeLog();
+renderLog();
+renderHourBars();
+renderNodes();
+</script>
+</body>
+</html>
